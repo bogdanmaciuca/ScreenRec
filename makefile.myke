@@ -1,0 +1,4 @@
+Compiler: clang
+Target: scrrec.exe
+Sources: main.c stb_image_write_impl.c
+Libs: user32.lib gdi32
