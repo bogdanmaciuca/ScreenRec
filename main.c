@@ -1,9 +1,9 @@
-// https://gist.github.com/rdp/9821698
-
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <direct.h>
+#include <sys/stat.h>
 #include <stdbool.h>
 #include "stb_image_write.h"
 
@@ -112,10 +112,17 @@ void CaptureTerminate(Capture* cap) {
     if (cap->pixels) free(cap->pixels);
 }
 
+void EnsureDir(const char *path) {
+    struct _stat st = {0};
+    if (_stat(path, &st) == -1)
+        _mkdir(path);
+}
+
 int main() {
     Capture capture;
     CaptureInit(&capture);
 
+    EnsureDir("Screenshots");
     CaptureScreenshot(&capture, "Screenshots/Screenshot");
 
     CaptureTerminate(&capture);
