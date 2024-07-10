@@ -103,6 +103,12 @@ void CaptureScreenshot(Capture* cap, const char* filename) {
     int stride = cap->width * channelNum;
     SwapChannels(cap->pixels, cap->width, cap->height);
     stbi_write_png(fullFilename, cap->width, cap->height, channelNum, cap->pixels, stride);
+
+    // Save to clipboard
+    OpenClipboard(NULL);
+    EmptyClipboard();
+    SetClipboardData(CF_BITMAP, cap->memoryBitmap);
+    CloseClipboard();
 }
 
 void CaptureTerminate(Capture* cap) {
