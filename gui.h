@@ -19,6 +19,7 @@ typedef struct GUI_t {
     int srcWidth;
     int srcHeight;
 
+    bool selectionFinished;
     POINT selectionStart;
     POINT selectionEnd;
     HBRUSH selectionBrush;
@@ -28,6 +29,8 @@ GUI gGui;
 bool GUI_Init(HINSTANCE instance, int srcWidth, int srcHeight) {
     gGui.selectionStart.x = -1;
     gGui.selectionStart.y = -1;
+    gGui.selectionEnd.x = -1;
+    gGui.selectionEnd.y = -1;
     gGui.srcWidth = srcWidth;
     gGui.srcHeight = srcHeight;
 
@@ -58,9 +61,9 @@ bool GUI_Init(HINSTANCE instance, int srcWidth, int srcHeight) {
     gGui.bmpInfo.bmiHeader.biPlanes      = 1;
     gGui.bmpInfo.bmiHeader.biBitCount    = 32;
     gGui.bmpInfo.bmiHeader.biCompression = BI_RGB;
-    gGui.bmpInfo.bmiHeader.biWidth = srcWidth;
-    gGui.bmpInfo.bmiHeader.biHeight = -srcHeight; 
-    gGui.bmpInfo.bmiHeader.biSizeImage = gGui.srcWidth * gGui.srcHeight * 4;
+    gGui.bmpInfo.bmiHeader.biWidth       = srcWidth;
+    gGui.bmpInfo.bmiHeader.biHeight      = -srcHeight; 
+    gGui.bmpInfo.bmiHeader.biSizeImage   = gGui.srcWidth * gGui.srcHeight * 4;
 
     gGui.hdc = GetDC(gGui.window);
     gGui.selectionBrush = CreateSolidBrush(RGB(50, 150, 50));
@@ -88,11 +91,19 @@ void GUI_SetPixels(BYTE* pixels) {
 
 void GUI__DrawSelection(HDC hdc) {
     RECT rect;
-    rect.left = gGui.selectionStart.x;
-    rect.right = gGui.selectionEnd.x;
-    rect.top = gGui.selectionStart.y;
+    rect.left   = gGui.selectionStart.x;
+    rect.right  = gGui.selectionEnd.x;
+    rect.top    = gGui.selectionStart.y;
     rect.bottom = gGui.selectionEnd.y;
     FrameRect(hdc, &rect, gGui.selectionBrush);
+}
+
+
+void GUI_ToScreenSpace(POINT* point) {
+    float ratioX = (float)gGui.srcWidth / (float)gGui.wndWidth;
+    float ratioY = (float)gGui.srcHeight / (float)gGui.wndHeight;
+    point->x *= ratioX;
+    point->y *= ratioY;
 }
 
 LRESULT CALLBACK GUI_WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
@@ -100,19 +111,26 @@ LRESULT CALLBACK GUI_WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
-    case WM_LBUTTONDOWN: {
+    case WM_LBUTTONDOWN:
+        gGui.selectionFinished = false;
         gGui.selectionStart.x = LOWORD(lparam);
         gGui.selectionStart.y = HIWORD(lparam);
-    } break;
-    case WM_LBUTTONUP:
-        gGui.selectionStart.x = -1;
-        gGui.selectionStart.y = -1;
-        break;
-    case WM_MOUSEMOVE: {
-        HDC hdc = GetDC(window);
         gGui.selectionEnd.x = LOWORD(lparam);
         gGui.selectionEnd.y = HIWORD(lparam);
-    } break;
+        break;
+    case WM_LBUTTONUP:
+        gGui.selectionFinished = true;
+        break;
+    case WM_MOUSEMOVE:
+        if (!gGui.selectionFinished) {
+            gGui.selectionEnd.x = LOWORD(lparam);
+            gGui.selectionEnd.y = HIWORD(lparam);
+        }
+        break;
+    case WM_KEYDOWN:
+        if (gGui.selectionFinished && (wparam == VK_RETURN || wparam == VK_SPACE))
+            PostQuitMessage(0);
+        break;
     case WM_PAINT: {
         if (gGui.pixels) {
             if (!StretchDIBits(gGui.hdc, 0, 0, gGui.wndWidth, gGui.wndHeight,

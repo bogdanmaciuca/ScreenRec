@@ -12,7 +12,9 @@
 
 typedef struct Capture_t {
     BYTE* pixels;
+    int x, y;
     int width, height;
+    int srcWidth, srcHeight;
     HDC windowDC;
     HDC memoryDC;
     HBITMAP bitmap;
@@ -51,38 +53,54 @@ char* GetTimeAsString() {
     return timeString;
 }
 
-void Capture_Init(Capture* cap) {
+void Capture_Init(Capture* cap, int x1, int y1, int x2, int y2) {
     ZeroMemory(cap, sizeof(Capture));
 
     HWND window = GetDesktopWindow();
     RECT windowRect;
     GetClientRect(window, &windowRect);
-    cap->width = windowRect.right - windowRect.left;
-    cap->height = windowRect.bottom - windowRect.top;
-
+    cap->srcWidth = windowRect.right - windowRect.left;
+    cap->srcHeight = windowRect.bottom - windowRect.top;
+    if (x2 == 0 || y2 == 0) {
+        cap->x = 0; cap->y = 0;
+        cap->width = cap->srcWidth;
+        cap->height = cap->srcHeight;
+    }
+    else {
+        cap->x = x1; cap->y = y1;
+        cap->width = x2 - x1;
+        cap->height = y2 - y1;
+    }
     cap->windowDC = GetDC(window);
-    cap->bitmap = CreateCompatibleBitmap(cap->windowDC, cap->width, cap->height);
+    cap->bitmap = CreateCompatibleBitmap(cap->windowDC, cap->srcWidth, cap->srcHeight);
     SelectObject(cap->windowDC, cap->bitmap);
 
     cap->memoryBitmap = CreateCompatibleBitmap(cap->windowDC, cap->width, cap->height);
     cap->memoryDC = CreateCompatibleDC(cap->windowDC);
     cap->oldBitmap = SelectObject(cap->memoryDC, cap->memoryBitmap);
 
-    BitBlt(cap->memoryDC, 0, 0, cap->width, cap->height, cap->windowDC, 0, 0, SRCCOPY | CAPTUREBLT);
+    BitBlt(cap->memoryDC, 0, 0, cap->width, cap->height, cap->windowDC, cap->x, cap->y, SRCCOPY);
 
     cap->bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     SelectObject(cap->memoryDC, cap->oldBitmap);
-    if (!GetDIBits(cap->memoryDC, cap->memoryBitmap, 0, -cap->height, NULL, &cap->bitmapInfo, DIB_RGB_COLORS)) {
+    if (!GetDIBits(cap->memoryDC, cap->memoryBitmap, 0, cap->srcHeight, NULL, &cap->bitmapInfo, DIB_RGB_COLORS)) {
         printf("GetDIBits() failed.\n");
         exit(1);
     }
     cap->bitmapInfo.bmiHeader.biHeight *= -1;
 
-    cap->pixels = malloc(cap->bitmapInfo.bmiHeader.biSizeImage);
+    cap->pixels = malloc(cap->width * cap->height * 4);
+}
+
+void Capture_Terminate(Capture* cap) {
+    DeleteObject(cap->memoryBitmap);
+    DeleteObject(cap->bitmap);
+    DeleteDC(cap->memoryDC);
+    if (cap->pixels) free(cap->pixels);
 }
 
 void Capture_GetFrame(Capture *cap) {
-    BitBlt(cap->memoryDC, 0, 0, cap->width, cap->height, cap->windowDC, 0, 0, SRCCOPY | CAPTUREBLT);
+    BitBlt(cap->memoryDC, 0, 0, cap->width, cap->height, cap->windowDC, cap->x, cap->y, SRCCOPY);
     if (!GetDIBits(cap->memoryDC, cap->memoryBitmap, 0, cap->height, cap->pixels, &cap->bitmapInfo, DIB_RGB_COLORS)) {
         printf("GetDIBits() failed.\n");
         exit(1);
@@ -110,13 +128,6 @@ void Capture_Screenshot(Capture* cap, const char* filename) {
     EmptyClipboard();
     SetClipboardData(CF_BITMAP, cap->memoryBitmap);
     CloseClipboard();
-}
-
-void Capture_Terminate(Capture* cap) {
-    DeleteObject(cap->memoryBitmap);
-    DeleteObject(cap->bitmap);
-    DeleteDC(cap->memoryDC);
-    if (cap->pixels) free(cap->pixels);
 }
 
 #endif
