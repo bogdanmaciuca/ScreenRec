@@ -20,6 +20,7 @@ typedef struct GUI_t {
     int srcHeight;
 
     bool selectionFinished;
+    bool usedForRec;
     POINT selectionStart;
     POINT selectionEnd;
     HBRUSH selectionBrush;
@@ -128,6 +129,28 @@ LRESULT CALLBACK GUI_WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM
         }
         break;
     case WM_KEYDOWN:
+        switch (wparam) {
+        case VK_RETURN: case VK_SPACE: case 'R':
+            if (gGui.selectionFinished) {
+                GUI_ToScreenSpace(&gGui.selectionStart);
+                GUI_ToScreenSpace(&gGui.selectionEnd);
+            }
+            else {
+                gGui.selectionStart.x = 0;
+                gGui.selectionStart.y = 0;
+                gGui.selectionEnd.x = gGui.srcWidth;
+                gGui.selectionEnd.y = gGui.srcHeight;
+            }
+            if (wparam == 'R') gGui.usedForRec = true;
+            PostQuitMessage(0);
+            break;
+        case VK_ESCAPE:
+            gGui.selectionFinished = false;
+            PostQuitMessage(0);
+            break;
+        default:
+            break;
+        }
         if (gGui.selectionFinished && (wparam == VK_RETURN || wparam == VK_SPACE))
             PostQuitMessage(0);
         break;

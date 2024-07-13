@@ -6,4 +6,4 @@ Basic screen recorder with WINAPI.
 - Using `cl`: `cl main.c stb_image_write_impl.c /link /out:scrrec.exe user32.lib gdi32.lib`
 
 ## Features:
-- Screenshots of the full screen
+- Screenshots of the full screen (supports cropping)

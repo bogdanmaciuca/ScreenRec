@@ -42,21 +42,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     POINT cursorPos;
     GUI_SetPixels(capture.pixels);
     while (GUI_GetMessage());
-    GUI_ToScreenSpace(&gGui.selectionStart);
-    GUI_ToScreenSpace(&gGui.selectionEnd);
     Capture_Terminate(&capture);
 
-    ShowWindow(gGui.window, SW_MINIMIZE);
-    Sleep(TIME_TO_MINIMIZE); // Wait for the window to be minimized
-    EnsureDir("ScreenRec_Data");
-    EnsureDir("ScreenRec_Data/Screenshots");
     if (gGui.selectionFinished) {
-        Capture_Init(&capture, gGui.selectionStart.x, gGui.selectionStart.y, gGui.selectionEnd.x, gGui.selectionEnd.y);
-        Capture_Screenshot(&capture, CAP_SCREENSHOT_FILENAME);
+        if (gGui.usedForRec) {
+            // ...
+        }
+        else {
+            ShowWindow(gGui.window, SW_MINIMIZE);
+            Sleep(TIME_TO_MINIMIZE); // Wait for the window to be minimized
+            EnsureDir("ScreenRec_Data");
+            EnsureDir("ScreenRec_Data/Screenshots");
+            Capture_Init(&capture, gGui.selectionStart.x, gGui.selectionStart.y, gGui.selectionEnd.x, gGui.selectionEnd.y);
+            Capture_Screenshot(&capture, CAP_SCREENSHOT_FILENAME);
+        }
     }
-
-    //Capture_Screenshot(&capture, "ScreenRec_Data/Screenshots/Screenshot");
-
     //time_t start,end;
     //time (&start);
     //for (int i = 0; i < 600; i++)
